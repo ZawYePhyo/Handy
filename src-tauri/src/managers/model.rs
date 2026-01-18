@@ -14,11 +14,12 @@ use std::sync::Mutex;
 use tar::Archive;
 use tauri::{AppHandle, Emitter, Manager};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq)]
 pub enum EngineType {
     Whisper,
     Parakeet,
     Moonshine,
+    Gemini,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -200,6 +201,26 @@ impl ModelManager {
                 engine_type: EngineType::Moonshine,
                 accuracy_score: 0.70,
                 speed_score: 0.90,
+            },
+        );
+
+        // Add Gemini online model (always available since it's API-based)
+        available_models.insert(
+            "gemini-2.5-flash".to_string(),
+            ModelInfo {
+                id: "gemini-2.5-flash".to_string(),
+                name: "Gemini 2.5 Flash (Online)".to_string(),
+                description: "Online model. Supports 100+ languages including Burmese. Requires API key.".to_string(),
+                filename: "".to_string(), // No file needed
+                url: None,                // No download URL
+                size_mb: 0,
+                is_downloaded: true,      // Always available
+                is_downloading: false,
+                partial_size: 0,
+                is_directory: false,
+                engine_type: EngineType::Gemini,
+                accuracy_score: 0.90,
+                speed_score: 0.70, // Network latency dependent
             },
         );
 

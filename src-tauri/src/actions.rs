@@ -1,14 +1,17 @@
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::apple_intelligence;
 use crate::audio_feedback::{play_feedback_sound, play_feedback_sound_blocking, SoundType};
+use crate::gemini_client;
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::history::HistoryManager;
+use crate::managers::model::{EngineType, ModelManager};
 use crate::managers::transcription::TranscriptionManager;
 use crate::settings::{get_settings, AppSettings, APPLE_INTELLIGENCE_PROVIDER_ID};
 use crate::shortcut;
 use crate::tray::{change_tray_icon, TrayIconState};
 use crate::utils::{self, show_recording_overlay, show_transcribing_overlay};
 use crate::ManagedToggleState;
+use anyhow::Result;
 use ferrous_opencc::{config::BuiltinConfig, OpenCC};
 use log::{debug, error};
 use once_cell::sync::Lazy;
@@ -294,6 +297,7 @@ impl ShortcutAction for TranscribeAction {
         let rm = Arc::clone(&app.state::<Arc<AudioRecordingManager>>());
         let tm = Arc::clone(&app.state::<Arc<TranscriptionManager>>());
         let hm = Arc::clone(&app.state::<Arc<HistoryManager>>());
+        let mm = Arc::clone(&app.state::<Arc<ModelManager>>());
 
         change_tray_icon(app, TrayIconState::Transcribing);
         show_transcribing_overlay(app);
@@ -323,7 +327,38 @@ impl ShortcutAction for TranscribeAction {
 
                 let transcription_time = Instant::now();
                 let samples_clone = samples.clone(); // Clone for history saving
-                match tm.transcribe(samples) {
+
+                // Check if selected model is Gemini (online API)
+                let settings = get_settings(&ah);
+                let is_gemini = mm
+                    .get_model_info(&settings.selected_model)
+                    .map(|info| info.engine_type == EngineType::Gemini)
+                    .unwrap_or(false);
+
+                // Route transcription based on model type
+                let transcription_result = if is_gemini {
+                    // Use Gemini API for transcription
+                    let api_key = settings
+                        .post_process_api_keys
+                        .get("gemini_transcription")
+                        .cloned()
+                        .unwrap_or_default();
+
+                    let language_hint = if settings.selected_language != "auto" {
+                        Some(settings.selected_language.clone())
+                    } else {
+                        None
+                    };
+
+                    gemini_client::transcribe_audio(&api_key, samples, language_hint)
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e))
+                } else {
+                    // Use local transcription engine
+                    tm.transcribe(samples)
+                };
+
+                match transcription_result {
                     Ok(transcription) => {
                         debug!(
                             "Transcription completed in {:?}: '{}'",

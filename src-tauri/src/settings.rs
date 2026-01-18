@@ -465,6 +465,8 @@ fn default_post_process_api_keys() -> HashMap<String, String> {
     for provider in default_post_process_providers() {
         map.insert(provider.id, String::new());
     }
+    // Add Gemini transcription API key (separate from post-processing)
+    map.insert("gemini_transcription".to_string(), String::new());
     map
 }
 

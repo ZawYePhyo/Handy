@@ -51,6 +51,10 @@
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "Very fast, English only. Handles accents well."
+      },
+      "gemini-2.5-flash": {
+        "name": "Gemini 2.5 Flash (Online)",
+        "description": "Online model. Supports 100+ languages including Burmese. Requires API key."
       }
     },
     "errors": {
@@ -99,7 +103,9 @@
     "modelError": "Model Error",
     "modelUnloaded": "Model Unloaded",
     "noModelDownloadRequired": "No Model - Download Required",
-    "deleteModel": "Delete {{modelName}}"
+    "deleteModel": "Delete {{modelName}}",
+    "online": "Online",
+    "requiresApiKey": "Requires API Key"
   },
   "settings": {
     "general": {
@@ -138,6 +144,10 @@
       "pushToTalk": {
         "label": "Push To Talk",
         "description": "Hold to record, release to stop"
+      },
+      "geminiApiKey": {
+        "title": "Gemini API Key",
+        "description": "Required for online transcription. Get your key from Google AI Studio."
       }
     },
     "sound": {
