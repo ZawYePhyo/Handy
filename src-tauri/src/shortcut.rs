@@ -407,6 +407,10 @@ fn validate_provider_exists(
     settings: &settings::AppSettings,
     provider_id: &str,
 ) -> Result<(), String> {
+    // Allow special keys for transcription API (not post-processing providers)
+    if provider_id == "gemini_transcription" {
+        return Ok(());
+    }
     if !settings
         .post_process_providers
         .iter()

@@ -66,7 +66,7 @@ const ModelDropdown: React.FC<ModelDropdownProps> = ({
   };
 
   return (
-    <div className="absolute bottom-full left-0 mb-2 w-64 bg-background border border-mid-gray/20 rounded-lg shadow-lg py-2 z-50">
+    <div className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-background border border-mid-gray/20 rounded-lg shadow-lg py-2 z-50">
       {/* First Run Welcome */}
       {isFirstRun && (
         <div className="px-3 py-2 bg-logo-primary/10 border-b border-logo-primary/20">
@@ -105,8 +105,13 @@ const ModelDropdown: React.FC<ModelDropdownProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm">
+                  <div className="text-sm flex items-center gap-2">
                     {getTranslatedModelName(model, t)}
+                    {model.engine_type === "Gemini" && (
+                      <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">
+                        {t("modelSelector.online")}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-text/40 italic pr-4">
                     {getTranslatedModelDescription(model, t)}

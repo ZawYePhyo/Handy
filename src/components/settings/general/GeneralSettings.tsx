@@ -10,6 +10,7 @@ import { AudioFeedback } from "../AudioFeedback";
 import { useSettings } from "../../../hooks/useSettings";
 import { useModelStore } from "../../../stores/modelStore";
 import { VolumeSlider } from "../VolumeSlider";
+import { GeminiApiKey } from "./GeminiApiKey";
 
 export const GeneralSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export const GeneralSettings: React.FC = () => {
   const { currentModel, getModelInfo } = useModelStore();
   const currentModelInfo = getModelInfo(currentModel);
   const showLanguageSelector = currentModelInfo?.engine_type === "Whisper";
+  const showGeminiApiKey = currentModelInfo?.engine_type === "Gemini";
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.general.title")}>
@@ -24,6 +26,7 @@ export const GeneralSettings: React.FC = () => {
         {showLanguageSelector && (
           <LanguageSelector descriptionMode="tooltip" grouped={true} />
         )}
+        {showGeminiApiKey && <GeminiApiKey />}
         <PushToTalk descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>
       <SettingsGroup title={t("settings.sound.title")}>

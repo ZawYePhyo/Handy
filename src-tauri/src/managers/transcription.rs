@@ -32,6 +32,7 @@ enum LoadedEngine {
     Whisper(WhisperEngine),
     Parakeet(ParakeetEngine),
     Moonshine(MoonshineEngine),
+    Gemini, // No engine needed - transcription happens via API
 }
 
 #[derive(Clone)]
@@ -145,6 +146,7 @@ impl TranscriptionManager {
                     LoadedEngine::Whisper(ref mut e) => e.unload_model(),
                     LoadedEngine::Parakeet(ref mut e) => e.unload_model(),
                     LoadedEngine::Moonshine(ref mut e) => e.unload_model(),
+                    LoadedEngine::Gemini => {} // No local model to unload
                 }
             }
             *engine = None; // Drop the engine to free memory
@@ -220,7 +222,12 @@ impl TranscriptionManager {
             return Err(anyhow::anyhow!(error_msg));
         }
 
-        let model_path = self.model_manager.get_model_path(model_id)?;
+        // For Gemini (online API), we don't need a local model path
+        let model_path = if model_info.engine_type == EngineType::Gemini {
+            std::path::PathBuf::new() // Empty path for online models
+        } else {
+            self.model_manager.get_model_path(model_id)?
+        };
 
         // Create appropriate engine based on model type
         let loaded_engine = match model_info.engine_type {
@@ -283,6 +290,11 @@ impl TranscriptionManager {
                         anyhow::anyhow!(error_msg)
                     })?;
                 LoadedEngine::Moonshine(engine)
+            }
+            EngineType::Gemini => {
+                // Gemini is an online API - no local model to load
+                // Just set the engine type so we know to use the API
+                LoadedEngine::Gemini
             }
         };
 
@@ -426,6 +438,13 @@ impl TranscriptionManager {
                 LoadedEngine::Moonshine(moonshine_engine) => moonshine_engine
                     .transcribe_samples(audio, None)
                     .map_err(|e| anyhow::anyhow!("Moonshine transcription failed: {}", e))?,
+                LoadedEngine::Gemini => {
+                    // Gemini transcription is handled directly in actions.rs via the API
+                    // This should not be called, return error if it is
+                    return Err(anyhow::anyhow!(
+                        "Gemini transcription should be routed through the API, not the local engine"
+                    ));
+                }
             }
         };
 
