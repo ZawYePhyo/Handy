@@ -16,14 +16,30 @@ export const GeminiApiKey: React.FC = () => {
     setLocalValue(apiKey);
   }, [apiKey]);
 
-  const handleBlur = async () => {
-    if (localValue !== apiKey) {
+  const handleSave = async (value: string) => {
+    if (value !== apiKey) {
       await commands.changePostProcessApiKeySetting(
         "gemini_transcription",
-        localValue,
+        value,
       );
     }
   };
+
+  const handleBlur = async () => {
+    await handleSave(localValue);
+  };
+
+  // Save on unmount if value changed
+  React.useEffect(() => {
+    return () => {
+      if (localValue !== apiKey) {
+        commands.changePostProcessApiKeySetting(
+          "gemini_transcription",
+          localValue,
+        );
+      }
+    };
+  }, [localValue, apiKey]);
 
   return (
     <SettingContainer
