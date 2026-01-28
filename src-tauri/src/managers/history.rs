@@ -437,6 +437,24 @@ impl HistoryManager {
         Ok(())
     }
 
+    pub async fn update_transcription_text(&self, id: i64, new_text: String) -> Result<()> {
+        let conn = self.get_connection()?;
+
+        conn.execute(
+            "UPDATE transcription_history SET transcription_text = ?1 WHERE id = ?2",
+            params![new_text, id],
+        )?;
+
+        debug!("Updated transcription text for entry {}", id);
+
+        // Emit history updated event
+        if let Err(e) = self.app_handle.emit("history-updated", ()) {
+            error!("Failed to emit history-updated event: {}", e);
+        }
+
+        Ok(())
+    }
+
     pub fn get_audio_file_path(&self, file_name: &str) -> PathBuf {
         self.recordings_dir.join(file_name)
     }

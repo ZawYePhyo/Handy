@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AudioPlayer } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
-import { Copy, Star, Check, Trash2, FolderOpen } from "lucide-react";
+import { Copy, Star, Check, Trash2, FolderOpen, Pencil, Save, X, Languages } from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readFile } from "@tauri-apps/plugin-fs";
@@ -230,6 +230,11 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   const { t, i18n } = useTranslation();
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [showCopied, setShowCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState(entry.transcription_text);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,6 +262,10 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     };
   }, [entry.file_name]);
 
+  useEffect(() => {
+    setEditedText(entry.transcription_text);
+  }, [entry.transcription_text]);
+
   const handleCopyText = () => {
     onCopyText();
     setShowCopied(true);
@@ -272,6 +281,46 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     }
   };
 
+  const handleStartEdit = () => {
+    setIsEditing(true);
+    setEditedText(entry.transcription_text);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedText(entry.transcription_text);
+  };
+
+  const handleSaveEdit = async () => {
+    setIsSaving(true);
+    try {
+      await commands.updateHistoryEntryText(entry.id, editedText);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to update transcription text:", error);
+      alert("Failed to save changes. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    setIsTranslating(true);
+    try {
+      const result = await commands.translateHistoryEntry(entry.transcription_text);
+      if (result.status === "ok") {
+        setTranslatedText(result.data);
+      } else {
+        throw new Error(result.error || "Translation failed");
+      }
+    } catch (error) {
+      console.error("Failed to translate text:", error);
+      alert(error instanceof Error ? error.message : "Failed to translate. Please check your Gemini API key in Settings.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const formattedDate = formatDateTime(String(entry.timestamp), i18n.language);
 
   return (
@@ -279,48 +328,106 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
       <div className="flex justify-between items-center">
         <p className="text-sm font-medium">{formattedDate}</p>
         <div className="flex items-center gap-1">
-          <button
-            onClick={handleCopyText}
-            className="text-text/50 hover:text-logo-primary  hover:border-logo-primary transition-colors cursor-pointer"
-            title={t("settings.history.copyToClipboard")}
-          >
-            {showCopied ? (
-              <Check width={16} height={16} />
-            ) : (
-              <Copy width={16} height={16} />
-            )}
-          </button>
-          <button
-            onClick={onToggleSaved}
-            className={`p-2 rounded  transition-colors cursor-pointer ${
-              entry.saved
-                ? "text-logo-primary hover:text-logo-primary/80"
-                : "text-text/50 hover:text-logo-primary"
-            }`}
-            title={
-              entry.saved
-                ? t("settings.history.unsave")
-                : t("settings.history.save")
-            }
-          >
-            <Star
-              width={16}
-              height={16}
-              fill={entry.saved ? "currentColor" : "none"}
-            />
-          </button>
-          <button
-            onClick={handleDeleteEntry}
-            className="text-text/50 hover:text-logo-primary transition-colors cursor-pointer"
-            title={t("settings.history.delete")}
-          >
-            <Trash2 width={16} height={16} />
-          </button>
+          {!isEditing && (
+            <>
+              <button
+                onClick={handleCopyText}
+                className="text-text/50 hover:text-logo-primary  hover:border-logo-primary transition-colors cursor-pointer"
+                title={t("settings.history.copyToClipboard")}
+              >
+                {showCopied ? (
+                  <Check width={16} height={16} />
+                ) : (
+                  <Copy width={16} height={16} />
+                )}
+              </button>
+              <button
+                onClick={handleStartEdit}
+                className="text-text/50 hover:text-logo-primary transition-colors cursor-pointer"
+                title="Edit transcription"
+              >
+                <Pencil width={16} height={16} />
+              </button>
+              <button
+                onClick={handleTranslate}
+                disabled={isTranslating}
+                className="text-text/50 hover:text-logo-primary transition-colors cursor-pointer disabled:opacity-50"
+                title={isTranslating ? "Translating..." : "Translate to English"}
+              >
+                <Languages width={16} height={16} />
+              </button>
+              <button
+                onClick={onToggleSaved}
+                className={`p-2 rounded  transition-colors cursor-pointer ${
+                  entry.saved
+                    ? "text-logo-primary hover:text-logo-primary/80"
+                    : "text-text/50 hover:text-logo-primary"
+                }`}
+                title={
+                  entry.saved
+                    ? t("settings.history.unsave")
+                    : t("settings.history.save")
+                }
+              >
+                <Star
+                  width={16}
+                  height={16}
+                  fill={entry.saved ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                onClick={handleDeleteEntry}
+                className="text-text/50 hover:text-logo-primary transition-colors cursor-pointer"
+                title={t("settings.history.delete")}
+              >
+                <Trash2 width={16} height={16} />
+              </button>
+            </>
+          )}
+          {isEditing && (
+            <>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="text-green-500 hover:text-green-600 transition-colors cursor-pointer disabled:opacity-50"
+                title="Save changes"
+              >
+                <Save width={16} height={16} />
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+                className="text-red-500 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50"
+                title="Cancel"
+              >
+                <X width={16} height={16} />
+              </button>
+            </>
+          )}
         </div>
       </div>
-      <p className="italic text-text/90 text-sm pb-2 select-text cursor-text">
-        {entry.transcription_text}
-      </p>
+      {isEditing ? (
+        <textarea
+          value={editedText}
+          onChange={(e) => setEditedText(e.target.value)}
+          className="w-full p-2 text-sm rounded border border-mid-gray/20 bg-background text-text resize-y min-h-[60px]"
+          disabled={isSaving}
+        />
+      ) : (
+        <>
+          <p className="italic text-text/90 text-sm pb-2 select-text cursor-text">
+            {entry.transcription_text}
+          </p>
+          {translatedText && (
+            <div className="mt-2 p-2 rounded bg-mid-gray/10 border-l-2 border-logo-primary">
+              <p className="text-xs text-mid-gray uppercase mb-1">English Translation:</p>
+              <p className="text-sm text-text/90 select-text cursor-text">
+                {translatedText}
+              </p>
+            </div>
+          )}
+        </>
+      )}
       {audioUrl && <AudioPlayer src={audioUrl} className="w-full" />}
     </div>
   );

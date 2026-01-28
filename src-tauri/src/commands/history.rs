@@ -1,4 +1,6 @@
 use crate::managers::history::{HistoryEntry, HistoryManager};
+use crate::gemini_client;
+use crate::settings;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
@@ -23,6 +25,20 @@ pub async fn toggle_history_entry_saved(
 ) -> Result<(), String> {
     history_manager
         .toggle_saved_status(id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn update_history_entry_text(
+    _app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+    id: i64,
+    new_text: String,
+) -> Result<(), String> {
+    history_manager
+        .update_transcription_text(id, new_text)
         .await
         .map_err(|e| e.to_string())
 }
@@ -98,4 +114,22 @@ pub async fn update_recording_retention_period(
         .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn translate_history_entry(
+    app: AppHandle,
+    _history_manager: State<'_, Arc<HistoryManager>>,
+    text: String,
+) -> Result<String, String> {
+    // Get Gemini API key from settings
+    let settings = settings::get_settings(&app);
+    let api_key = settings
+        .post_process_api_keys
+        .get("gemini_transcription")
+        .ok_or_else(|| "Gemini API key not configured".to_string())?;
+
+    // Call Gemini translate function
+    gemini_client::translate_text(api_key, &text).await
 }

@@ -155,6 +155,126 @@ pub async fn transcribe_audio(
     Err(format!("Gemini transcription failed: {}", last_error))
 }
 
+/// Translates text from Burmese to English using Gemini API
+///
+/// # Arguments
+/// * `api_key` - The Gemini API key
+/// * `text` - The text to translate
+///
+/// # Returns
+/// The translated text or an error
+pub async fn translate_text(
+    api_key: &str,
+    text: &str,
+) -> Result<String, String> {
+    if api_key.is_empty() {
+        return Err("Gemini API key is not configured. Please add your API key in Settings.".to_string());
+    }
+
+    if text.is_empty() {
+        return Ok(String::new());
+    }
+
+    info!("Starting Gemini translation for text: {} chars", text.len());
+
+    let prompt = format!(
+        "Translate the following text from Burmese to English. Return only the translated text, nothing else:\n\n{}",
+        text
+    );
+
+    // Try models in order
+    let models = ["gemini-2.5-flash", "gemini-2.0-flash"];
+    let mut last_error = String::new();
+
+    for model in &models {
+        debug!("Attempting translation with model: {}", model);
+
+        match send_text_request(api_key, model, &prompt).await {
+            Ok(translated) => {
+                info!(
+                    "Gemini translation succeeded with model {}: {} chars",
+                    model,
+                    translated.len()
+                );
+                return Ok(translated);
+            }
+            Err(e) => {
+                error!("Gemini translation failed with model {}: {}", model, e);
+                last_error = e;
+            }
+        }
+    }
+
+    Err(format!("Gemini translation failed: {}", last_error))
+}
+
+async fn send_text_request(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<String, String> {
+    let url = format!(
+        "{}/models/{}:generateContent?key={}",
+        GEMINI_API_BASE, model, api_key
+    );
+
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+
+    let request_body = GeminiRequest {
+        contents: vec![Content {
+            parts: vec![
+                Part::Text {
+                    text: prompt.to_string(),
+                },
+            ],
+        }],
+    };
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&url)
+        .headers(headers)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+    let status = response.status();
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("API request failed with status {}: {}", status, response_text));
+    }
+
+    let gemini_response: GeminiResponse = serde_json::from_str(&response_text)
+        .map_err(|e| format!("Failed to parse response: {} - Response: {}", e, response_text))?;
+
+    if let Some(error) = gemini_response.error {
+        return Err(format!(
+            "Gemini API error (code {:?}): {}",
+            error.code, error.message
+        ));
+    }
+
+    // Extract text from the response
+    let text = gemini_response
+        .candidates
+        .and_then(|c| c.into_iter().next())
+        .and_then(|c| c.content)
+        .and_then(|c| c.parts)
+        .and_then(|p| p.into_iter().next())
+        .and_then(|p| p.text)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    Ok(text)
+}
+
 async fn send_transcription_request(
     api_key: &str,
     model: &str,
