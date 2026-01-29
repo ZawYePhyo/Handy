@@ -5,16 +5,16 @@
 ---
 
 ## Table of Contents
-1. [What We Built](#what-we-built)
-2. [The Architecture: How It All Fits Together](#the-architecture)
-3. [The Technology Stack: Why These Choices Matter](#the-technology-stack)
-4. [Codebase Structure: Finding Your Way Around](#codebase-structure)
-5. [Our Custom Features: Edit and Translate](#our-custom-features)
-6. [The Debugging Journey: What Went Wrong and How We Fixed It](#the-debugging-journey)
-7. [Working With a Fork: Managing Upstream Changes](#working-with-a-fork)
-8. [Lessons Learned: Wisdom From The Trenches](#lessons-learned)
-9. [Best Practices: How Good Engineers Think](#best-practices)
-10. [What's Next: Future Considerations](#whats-next)
+1. [[#What We Built]]
+2. [[#The Architecture: How It All Fits Together]]
+3. [[#The Technology Stack: Why These Choices Matter]]
+4. [[#Codebase Structure: Finding Your Way Around]]
+5. [[#Our Custom Features: Edit and Translate]]
+6. [[#The Debugging Journey: What Went Wrong and How We Fixed It]]
+7. [[#Working With a Fork: Managing Upstream Changes]]
+8. [[#Lessons Learned: Wisdom From The Trenches]]
+9. [[#Best Practices: How Good Engineers Think]]
+10. [[#What's Next: Future Considerations]]
 
 ---
 
